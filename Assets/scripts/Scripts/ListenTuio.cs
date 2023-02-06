@@ -5,12 +5,17 @@ using UnityEngine.UI;
 /// <summary>
 ///     目前只支持Camera的Render Mode = Screen Space - Overly
 /// </summary>
-public class ListenTuio : MonoBehaviour
+public class ListenTuio : MonoBehaviour,IClick
 {
     /// <summary>
     ///     触摸是否进入
     /// </summary>
     private bool _isEnter;
+
+    /// <summary>
+    /// 进入的事件雷达事件ID
+    /// </summary>
+    private int _enterId;
 
     /// <summary>
     ///     触摸出现的时候，是否是首先进入该监听区域
@@ -35,10 +40,13 @@ public class ListenTuio : MonoBehaviour
     public event Action<EventInfo> Pointing;
 
     public event Action<EventInfo> RadarExitEvent; 
+
    
 
     private void EnterEvent(EventInfo info)
     {
+        //Debug.Log("enter");
+
         var pos = info.Position;
 
         var isContains = GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, pos);
@@ -56,13 +64,41 @@ public class ListenTuio : MonoBehaviour
         }
     }
 
+    private void PointEnterEvent(EventInfo info)
+    {
+       
+
+        if (_isEnter) return;//已经有触摸ID进入，其他的都触摸ID进入就不会触发
+
+       // Debug.Log($"EnterEvent  触摸 进入 了该组件 {name} id 是 {info.ID}");
+        _isEnter = true;
+        if (PointEnter != null) PointEnter(info);
+        _isFirstEnter = true;
+        _enterId = info.ID;
+    }
+
+    private void Awake()
+    {
+        CuRectTransform = this.GetComponent<RectTransform>();
+        _isEnter = false;
+    }
+
+    
     private void EnteringEvent(EventInfo info)
     {
-        var pos = info.Position;
+        if (!_isEnter) return;
 
-        var isContains = GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, pos);
+        if (info.ID != _enterId) return;
 
-        if (isContains)
+       
+
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, CuRectTransform.transform.position);
+
+        UpdatePosition(screenPoint);
+
+        var isContains = GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, info.Position);
+
+        if (isContains)//触摸点是否包含在UI的方框里
         {
             if (!_isEnter)
                 //Debug.Log("EnteringEvent 进入了该组件" + this.name);
@@ -77,10 +113,9 @@ public class ListenTuio : MonoBehaviour
         }
         else
         {
-            if (_isEnter)
-                //Debug.Log(_leftDown + " " + _leftUp + " " + _rightDown + " " + _rightUp + " "+ pos);
-                // Debug.Log("EnteringEvent  触摸离开了该组件 " +this.name);
-                if (PointExit != null)
+            //if (_isEnter)
+           // Debug.Log($"EnteringEvent  触摸 离开 了该组件 {name} id 是 {info.ID}");
+            if (PointExit != null)
                     PointExit(info);
             _isEnter = false;
         }
@@ -88,28 +123,46 @@ public class ListenTuio : MonoBehaviour
 
     private void ExitEvent(EventInfo info)
     {
-        var pos = info.Position;
 
-        var isContains = GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, pos);
+        if (!_isEnter) return;
 
-        if (isContains)
+        //if (info.ID != _enterId) return;
+
+
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, CuRectTransform.transform.position);
+        UpdatePosition(screenPoint);
+
+        var isContains = GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, info.ExitPos);
+
+
+        if (isContains)//触摸点是否包含在UI的方框里
         {
             if (_isFirstEnter)
             {
                 if (OnClick != null)
                     OnClick();
-                //Debug.Log("触发了点击事件 " + name);
+             
                 _isFirstEnter = false;
+              //  Debug.Log($"EnterEvent  触摸 离开 了该组件 {name} id 是 {info.ID},并触发了 点击 事件");
+                if (PointExit != null)
+                    PointExit(info);
+                _isEnter = false;
             }
+
+           
+            
         }
         else
         {
             if (_isEnter)
-                //Debug.Log("ExitEvent 触摸离开了该组件" + this.name); 
+            {
+              //  Debug.Log($"EnterEvent  触摸 离开 了该组件 {name} id 是 {info.ID}");
                 if (PointExit != null)
                     PointExit(info);
-            _isEnter = false;
+                _isEnter = false;
+            }
         }
+        
     }
 
     private void UpdatePosition()
@@ -125,16 +178,36 @@ public class ListenTuio : MonoBehaviour
         _rightDown = _pos + new Vector2(_sizeData.x / 2, -_sizeData.y / 2);
 
         _rightUp = _pos + new Vector2(_sizeData.x / 2, _sizeData.y / 2);
+
+       // RectTransformUtility.ScreenPointToWorldPointInRectangle()
+    }
+
+    private void UpdatePosition(Vector3 screenPos)
+    {
+        _sizeData = _maskableGraphic.rectTransform.sizeDelta;
+
+        _pos = screenPos;
+
+        _leftDown = _pos + new Vector2(-_sizeData.x / 2, -_sizeData.y / 2);
+
+        _leftUp = _pos + new Vector2(-_sizeData.x / 2, _sizeData.y / 2);
+
+        _rightDown = _pos + new Vector2(_sizeData.x / 2, -_sizeData.y / 2);
+
+        _rightUp = _pos + new Vector2(_sizeData.x / 2, _sizeData.y / 2);
+
+        // RectTransformUtility.ScreenPointToWorldPointInRectangle()
     }
 
     private void Start()
     {
         _maskableGraphic = GetComponent<MaskableGraphic>();
-        TuioManager.Instance.EnterEvent += EnterEvent;
+        //TuioManager.Instance.EnterEvent += EnterEvent;
+        Click += PointEnterEvent;
         TuioManager.Instance.EnteringEvent += EnteringEvent;
         TuioManager.Instance.ExitEvent += ExitEvent;
 
-       
+       TuioManager.Instance.AddClick(this);
 
         // Debug.Log(_sizeData);
     }
@@ -142,6 +215,41 @@ public class ListenTuio : MonoBehaviour
     // Update is called once per frame
     private void Update()
     {
-        UpdatePosition();
+        //UpdatePosition();
     }
+
+    public RectTransform CuRectTransform { get; set; }
+    public int GetIndex()
+    {
+        return CuRectTransform.GetSiblingIndex();
+    }
+
+   
+    public Action<EventInfo> Click { get; set; }
+    bool IClick.IsContains(EventInfo info)
+    {
+        Vector2 screenPoint = RectTransformUtility.WorldToScreenPoint(null, CuRectTransform.transform.position);
+        UpdatePosition(screenPoint);
+       
+         return   GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, info.EnterPos);
+       
+       // return GlobSetting.ContainsQuadrangle(_leftDown, _leftUp, _rightDown, _rightUp, info.EnterPos);
+    }
+
+   
+}
+
+
+public interface IClick
+{
+    int GetIndex();
+
+    Action<EventInfo> Click
+    {
+        get;
+        set;
+    }
+        
+    bool IsContains(EventInfo info);
+   
 }

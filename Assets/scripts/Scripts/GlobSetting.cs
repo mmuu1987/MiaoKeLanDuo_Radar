@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -26,6 +27,13 @@ public static class GlobSetting  {
         if (value3 * value4 < 0) return false;
 
         return true;
+    }
+
+    public static IEnumerator WaitTime(float time,Action action)
+    {
+        yield return new WaitForSeconds(time);
+
+        if (action != null) action();
     }
 
 }

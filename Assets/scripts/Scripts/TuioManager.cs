@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using TUIOsharp;
 using TUIOsharp.DataProcessors;
 using UnityEngine;
-using UnityEngine.UI;
+using UnityEngine.UIElements;
+using Image = UnityEngine.UI.Image;
 
 public enum EventState
 {
@@ -105,6 +107,17 @@ public class TuioManager : MonoBehaviour
 
     private List<EventInfo> _eventInfos = new List<EventInfo>();
 
+    /// <summary>
+    /// 当前雷达接收到触摸的个数
+    /// </summary>
+    public int TouchCount
+    {
+        get
+        {
+            return _eventInfos.Count;
+        }
+    }
+
     public bool IsShowTip = true;
 
     private static WaitForEndOfFrame _waitForEndOfFrame;
@@ -114,6 +127,8 @@ public class TuioManager : MonoBehaviour
     /// 触摸进入雷达监测范围事件
     /// </summary>
     public event Action<EventInfo> EnterEvent;
+
+    private List<IClick> _clicks = new List<IClick>();
 
     /// <summary>
     /// 雷达持续监测到触摸进入监测范围
@@ -180,8 +195,36 @@ public class TuioManager : MonoBehaviour
                     case EventState.Enter:
                         info.EnterTime = Time.realtimeSinceStartup;
                         if (EnterEvent != null) EnterEvent(info);
+
+                        
                         info.State = EventState.Entering;//主动改状态,在下一个循环进行更新  
                         _eventInfos[i] = info;
+
+                        List<IClick> enterList = new List<IClick>();
+
+                        foreach (IClick click in _clicks)
+                        {
+                            if (click.IsContains(info))
+                            {
+                                enterList.Add(click);
+                               // Debug.Log("添加到点击范围判断");
+                            }
+                        }
+
+                        enterList.Sort(((clickA, clickB) =>
+                        {
+                            if (clickA.GetIndex() >= clickB.GetIndex())
+                            {
+                                return -1;
+                            }
+                            
+                            return 1;
+                        }));
+
+                        if(enterList.Count>0)
+                         enterList.First().Click(info);
+                        //else Debug.Log("没有ui点击");
+                        
                         //Debug.Log(EventInfos.Count);
                        // Debug.Log("id " + info.ID + "  Enter. position is " + info.EnterPos);
                         break;
@@ -194,8 +237,9 @@ public class TuioManager : MonoBehaviour
                     case EventState.Exit:
                         _exitIndexs.Add(info);
                         info.ExitTime = Time.realtimeSinceStartup;
+                        
                         if (ExitEvent != null) ExitEvent(info);
-                        // Debug.Log("id " + info.ID + "  exit . position is " + info.ExitPos);
+                       //  Debug.Log("id " + info.ID + "  exit . position is " + info.ExitPos);
                         break;
 
                     default:
@@ -211,6 +255,7 @@ public class TuioManager : MonoBehaviour
                     Vector3 pos = info.Position;
 
                     Image tip = _tipObjects[i];
+                    tip.rectTransform.sizeDelta = Vector2.one*50f;
                     tip.transform.position = pos;
                     if (!tip.gameObject.activeInHierarchy) tip.gameObject.SetActive(true);
                 }
@@ -228,6 +273,11 @@ public class TuioManager : MonoBehaviour
                 _eventInfos[i].Delta = Vector2.zero;
             }
         
+    }
+
+    public void AddClick(IClick click)
+    {
+        _clicks.Add(click);
     }
 
     //private void Update()
