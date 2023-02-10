@@ -116,6 +116,7 @@ public class GameManager : MonoBehaviour
 
         Init();
 
+       // Debug.Log(CoreDisheses.Count );
         foreach (CoreDishes coreDishes in CoreDisheses)
         {
             coreDishes.AdddFlavouring += AdddFlavouring;

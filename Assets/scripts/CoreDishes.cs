@@ -17,10 +17,13 @@ public class CoreDishes : MonoBehaviour
     /// </summary>
     public Action<bool, RectTransform> AdddFlavouring;
 
+    public List<RectTransform> FoodPartList = new List<RectTransform>();
+
     public float maxDis = 100;
 
     public float minDis = 0f;
 
+    public GameObject DragItem;
 
     private ListenTuio _listenTuio;
 
@@ -78,7 +81,27 @@ public class CoreDishes : MonoBehaviour
         TuioManager.Instance.EnteringEvent += EnteringEvent;
         TuioManager.Instance.ExitEvent += _listenTuio_RadarExitEvent;
 
-        _itemDisheses = this.GetComponentsInChildren<ItemDishes>(true).ToList();
+
+        float angle = 360f / FoodPartList.Count;
+
+        for (int i = 0; i < FoodPartList.Count; i++)
+        {
+            Quaternion q = Quaternion.Euler(new Vector3(0f, 0f, i * angle));
+
+            Vector2 disDir = q * Vector2.up * 200f;//180不是角度，而是距离
+
+            GameObject go = Instantiate(DragItem, RotationRectTransform.transform);
+
+            ItemDishes itemDishes = go.GetComponent<ItemDishes>();
+
+            itemDishes.name = FoodPartList[i].name;//赋予名字一致
+
+
+            itemDishes.CuRectTransform.anchoredPosition = this.RotationRectTransform.anchoredPosition + disDir;
+            _itemDisheses.Add(itemDishes);
+
+
+        }
 
         ShowItemDishes(false);
     }
@@ -89,6 +112,7 @@ public class CoreDishes : MonoBehaviour
         if (_enterId != obj.ID) return;
         Rotation(obj);
         _enterDir = Vector2.zero;
+        _isEnter = false;
     }
 
     private void EnteringEvent(EventInfo obj)
@@ -150,9 +174,17 @@ public class CoreDishes : MonoBehaviour
     }
     private void ShowItemDishes(bool isShow)
     {
+
+        
+
         foreach (ItemDishes dishes in _itemDisheses)
         {
             dishes.gameObject.SetActive(isShow);
+        }
+
+        foreach (RectTransform rectTransform in FoodPartList)
+        {
+            rectTransform.gameObject.SetActive(isShow);
         }
     }
 

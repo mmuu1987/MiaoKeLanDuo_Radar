@@ -90,7 +90,7 @@ public class DragRotation : MonoBehaviour
         _enterDir = Vector2.zero;
         _isEnter = false;
 
-         Debug.Log("触摸离开，位置是" + obj.ExitPos);
+        // Debug.Log("触摸离开，位置是" + obj.ExitPos);
 
     }
 
@@ -100,7 +100,7 @@ public class DragRotation : MonoBehaviour
 
         _enterId = obj.ID;
         _isEnter = true;
-        Debug.Log("触摸进入 位置是 " + obj.EnterPos);
+        //Debug.Log("触摸进入 位置是 " + obj.EnterPos);
         _enterPos = obj.EnterPos;
         _enterDir = (_enterPos - centerPos).normalized;
        
@@ -139,7 +139,7 @@ public class DragRotation : MonoBehaviour
 
         isEnterCircle= CheckRange(obj.Position);
 
-        Debug.Log("isEnterCircle is " + isEnterCircle);
+        //Debug.Log("isEnterCircle is " + isEnterCircle);
 
 
         if (!isEnterCircle)
